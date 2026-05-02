@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import sys
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GCNConv
 from torch_geometric.transforms import NormalizeFeatures
@@ -65,8 +66,8 @@ def accuracy(model, data, mask):
     return acc
 
 
-def run_gcn(epochs=200):
-    dataset, data = load_data("Cora")
+def run_experiment(dataset_name="Cora", epochs=200):
+    dataset, data = load_data(dataset_name)
     print_data_info(dataset, data)
 
     model = GCN(
@@ -77,19 +78,52 @@ def run_gcn(epochs=200):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
+    losses = []
+    val_accuracies = []
+
     for epoch in range(1, epochs + 1):
         loss = train(model, data, optimizer)
+        val_acc = accuracy(model, data, data.val_mask)
+
+        losses.append(loss)
+        val_accuracies.append(val_acc)
 
         if epoch == 1 or epoch % 20 == 0:
-            print("Epoch:", epoch, "Loss:", round(loss, 4))
+            print("Epoch:", epoch, "Loss:", round(loss, 4), "Val acc:", round(val_acc, 4))
+
+    train_acc = accuracy(model, data, data.train_mask)
+    val_acc = accuracy(model, data, data.val_mask)
+    test_acc = accuracy(model, data, data.test_mask)
+
+    results = {
+        "losses": losses,
+        "val_accuracies": val_accuracies,
+        "train_acc": train_acc,
+        "val_acc": val_acc,
+        "test_acc": test_acc,
+    }
 
     print("\nFinal results:")
-    print("Train accuracy:", round(accuracy(model, data, data.train_mask), 4))
-    print("Validation accuracy:", round(accuracy(model, data, data.val_mask), 4))
-    print("Test accuracy:", round(accuracy(model, data, data.test_mask), 4))
+    print("Train accuracy:", round(train_acc, 4))
+    print("Validation accuracy:", round(val_acc, 4))
+    print("Test accuracy:", round(test_acc, 4))
 
+    return model, dataset, data, results
+
+
+def run_gcn(dataset_name="Cora", epochs=200):
+    model, dataset, data, results = run_experiment(dataset_name, epochs)
     return model, dataset, data
 
 
 if __name__ == "__main__":
-    run_gcn()
+    dataset_name = "Cora"
+
+    if len(sys.argv) > 1:
+        dataset_name = sys.argv[1]
+
+    # PyG wants this exact spelling
+    if dataset_name.lower() == "citeseer":
+        dataset_name = "CiteSeer"
+
+    run_gcn(dataset_name)
