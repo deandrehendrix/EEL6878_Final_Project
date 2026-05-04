@@ -24,6 +24,6 @@ To run this project locally, we recommend creating a Python virtual environment 
 
 1. Clone the repository:
     ```bash
-    git clone <your-github-repo-url>
+    git clone https://github.com/deandrehendrix/EEL6878_Final_Project
     cd EEL6878_Final_Project
     ```
